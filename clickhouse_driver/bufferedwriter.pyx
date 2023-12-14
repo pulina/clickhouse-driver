@@ -61,25 +61,28 @@ cdef class BufferedWriter(object):
     def write_fixed_strings_as_bytes(self, items, Py_ssize_t length):
         cdef Py_ssize_t buf_pos = 0
         cdef Py_ssize_t items_buf_size = length * len(items)
-
+        if items_buf_size > self.buffer_size:
+            items_buf_size = self.buffer_size # type fuck
         cdef char* c_value
         cdef char* items_buf = <char *>PyMem_Malloc(items_buf_size)
         if not items_buf:
             raise MemoryError()
 
         memset(items_buf, 0, items_buf_size)
-
-        for value in items:
-            value_len = len(value)
-            if length < value_len:
-                raise errors.TooLargeStringSize()
-
-            c_value = PyBytes_AsString(value)
-
-            memcpy(&items_buf[buf_pos], c_value, value_len)
-            buf_pos += length
         try:
-            self.write(PyBytes_FromStringAndSize(items_buf, items_buf_size))
+            for value in items:
+                value_len = len(value)
+                if length < value_len:
+                    raise errors.TooLargeStringSize()
+
+                c_value = PyBytes_AsString(value)
+
+                memcpy(&items_buf[buf_pos], c_value, value_len)
+                buf_pos += length
+                if buf_pos + length > items_buf_size:
+                    self.write(PyBytes_FromStringAndSize(items_buf, buf_pos))
+                    buf_pos = 0
+            self.write(PyBytes_FromStringAndSize(items_buf, buf_pos))
         finally:
             PyMem_Free(items_buf)
 

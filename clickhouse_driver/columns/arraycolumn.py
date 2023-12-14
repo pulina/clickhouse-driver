@@ -25,6 +25,7 @@ class ArrayColumn(Column):
 
     After sizes info comes flatten data: 3 -> 4 -> 5 -> 6
     """
+
     py_types = (list, tuple)
 
     def __init__(self, nested_column, **kwargs):
@@ -38,18 +39,14 @@ class ArrayColumn(Column):
     def write_data(self, data, buf):
         # Column of Array(T) is stored in "compact" format and passed to server
         # wrapped into another Array without size of wrapper array.
-        self.nested_column = ArrayColumn(
-            self.nested_column, **self.init_kwargs
-        )
+        self.nested_column = ArrayColumn(self.nested_column, **self.init_kwargs)
         self.nested_column.nullable = self.nullable
         self.nullable = False
         self._write_depth_0_size = False
         self._write(data, buf)
 
     def read_data(self, n_rows, buf):
-        self.nested_column = ArrayColumn(
-            self.nested_column, **self.init_kwargs
-        )
+        self.nested_column = ArrayColumn(self.nested_column, **self.init_kwargs)
         self.nested_column.nullable = self.nullable
         self.nullable = False
         return self._read(n_rows, buf)[0]
@@ -59,7 +56,6 @@ class ArrayColumn(Column):
 
         column = self
         sizes = [len(value)] if self._write_depth_0_size else []
-
         while True:
             nested_column = column.nested_column
             if not isinstance(nested_column, ArrayColumn):
@@ -76,19 +72,15 @@ class ArrayColumn(Column):
 
             value = new_value
             column = nested_column
-
         if nulls_map:
             self._write_nulls_map(nulls_map, buf)
 
-        ns = Struct('<{}Q'.format(len(sizes)))
+        ns = Struct("<{}Q".format(len(sizes)))
         buf.write(ns.pack(*sizes))
 
     def _write_data(self, value, buf):
         if self.nullable:
             value = value or []
-
-        if isinstance(self.nested_column, ArrayColumn):
-            value = list(chain.from_iterable(value))
 
         if value:
             self.nested_column._write_data(value, buf)
@@ -98,7 +90,6 @@ class ArrayColumn(Column):
             value = value or []
 
         if isinstance(self.nested_column, ArrayColumn):
-            value = list(chain.from_iterable(value))
             self.nested_column._write_nulls_data(value, buf)
         else:
             if self.nested_column.nullable:
@@ -107,6 +98,10 @@ class ArrayColumn(Column):
     def _write(self, value, buf):
         value = self.prepare_items(value)
         self._write_sizes(value, buf)
+        if isinstance(self.nested_column, ArrayColumn):
+            value = list(
+                chain.from_iterable(value)
+            )
         self._write_nulls_data(value, buf)
         self._write_data(value, buf)
 
@@ -126,16 +121,15 @@ class ArrayColumn(Column):
 
         cur_level_slice_size = size
         cur_level_slice = None
-        while (isinstance(nested_column, ArrayColumn)):
+        while isinstance(nested_column, ArrayColumn):
             if cur_level_slice is None:
                 cur_level_slice = [0]
-            ns = Struct('<{}Q'.format(cur_level_slice_size))
+            ns = Struct("<{}Q".format(cur_level_slice_size))
             nested_sizes = ns.unpack(buf.read(ns.size))
             cur_level_slice.extend(nested_sizes)
             slices_series.append(cur_level_slice)
             cur_level_slice = None
-            cur_level_slice_size = nested_sizes[-1] if len(nested_sizes) > 0 \
-                else 0
+            cur_level_slice_size = nested_sizes[-1] if len(nested_sizes) > 0 else 0
             nested_column = nested_column.nested_column
 
         n_items = cur_level_slice_size if size > 0 else 0
@@ -145,9 +139,7 @@ class ArrayColumn(Column):
 
         data = []
         if n_items:
-            data = list(nested_column._read_data(
-                n_items, buf, nulls_map=nulls_map
-            ))
+            data = list(nested_column._read_data(n_items, buf, nulls_map=nulls_map))
 
         # Build nested structure.
         for slices in reversed(slices_series):

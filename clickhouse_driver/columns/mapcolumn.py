@@ -43,7 +43,7 @@ class MapColumn(Column):
             for begin, end in pairwise(offsets)
         ]
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         offsets = []
         keys = []
         values = []

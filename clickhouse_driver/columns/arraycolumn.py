@@ -64,13 +64,11 @@ class ArrayColumn(Column):
                 break
 
             offset = 0
-            new_value = []
             for x in value:
                 offset += len(x)
                 sizes.append(offset)
-                new_value.extend(x)
 
-            value = new_value
+            value = chain.from_iterable(value)
             column = nested_column
         if nulls_map:
             self._write_nulls_map(nulls_map, buf)
@@ -78,32 +76,37 @@ class ArrayColumn(Column):
         ns = Struct("<{}Q".format(len(sizes)))
         buf.write(ns.pack(*sizes))
 
-    def _write_data(self, value, buf):
+    def _write_data(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
         if self.nullable:
-            value = value or []
+            items = items or []
+        if isinstance(self.nested_column, ArrayColumn):
+            n_items = sum((1 for sublist in items for _ in sublist))
+            items = chain.from_iterable(items)
+        if items:
+            self.nested_column._write_data(items, buf, n_items)
 
-        if value:
-            self.nested_column._write_data(value, buf)
-
-    def _write_nulls_data(self, value, buf):
+    def _write_nulls_data(self, items, buf, n_items):
+        if n_items is None:
+            n_items = len(items)
         if self.nullable:
-            value = value or []
+            items = items or []
 
         if isinstance(self.nested_column, ArrayColumn):
-            self.nested_column._write_nulls_data(value, buf)
+            n_items = sum((1 for sublist in items for _ in sublist))
+            items = chain.from_iterable(items)
+            self.nested_column._write_nulls_data(items, buf, n_items)
         else:
             if self.nested_column.nullable:
-                self.nested_column._write_nulls_map(value, buf)
+                self.nested_column._write_nulls_map(items, buf, n_items)
 
-    def _write(self, value, buf):
-        value = self.prepare_items(value)
-        self._write_sizes(value, buf)
-        if isinstance(self.nested_column, ArrayColumn):
-            value = list(
-                chain.from_iterable(value)
-            )
-        self._write_nulls_data(value, buf)
-        self._write_data(value, buf)
+    def _write(self, items, buf):
+        n_items = len(items)
+        items = self.prepare_items(items, n_items)
+        self._write_sizes(items, buf)
+        self._write_nulls_data(items, buf, n_items)
+        self._write_data(items, buf, n_items)
 
     def read_state_prefix(self, buf):
         super(ArrayColumn, self).read_state_prefix(buf)

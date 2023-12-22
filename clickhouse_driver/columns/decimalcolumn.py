@@ -64,10 +64,12 @@ class DecimalColumn(FormatColumn):
                     items[i] = int(Decimal(str(item)))
 
     # Override default precision to the maximum supported by underlying type.
-    def _write_data(self, items, buf):
+    def _write_data(self, items, buf, n_value=None):
+        if n_value is None:
+            n_value = len(items)
         with localcontext() as ctx:
             ctx.prec = self.max_precision
-            super(DecimalColumn, self)._write_data(items, buf)
+            super(DecimalColumn, self)._write_data(items, buf, n_value)
 
     def _read_data(self, n_items, buf, nulls_map=None):
         with localcontext() as ctx:

@@ -49,7 +49,7 @@ class NumpyDateTimeColumn(NumpyDateTimeColumnBase):
     dtype = np.dtype(np.uint32)
     datetime_dtype = 'datetime64[s]'
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         # write int 'as is'.
         if self.is_items_integer(items):
             super(NumpyDateTimeColumn, self).write_items(items, buf)
@@ -86,7 +86,7 @@ class NumpyDateTime64Column(NumpyDateTimeColumnBase):
 
         return self.apply_timezones_after_read(dt)
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         # write int 'as is'.
         if self.is_items_integer(items):
             super(NumpyDateTime64Column, self).write_items(items, buf)

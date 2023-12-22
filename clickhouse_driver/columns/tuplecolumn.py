@@ -20,13 +20,13 @@ class TupleColumn(Column):
         self.null_value = tuple(x.null_value for x in nested_columns)
 
     def write_data(self, items, buf):
-        items = self.prepare_items(items)
+        items = self.prepare_items(items, len(items))
         items = list(zip(*items))
 
         for i, x in enumerate(self.nested_columns):
             x.write_data(list(items[i]), buf)
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         return self.write_data(items, buf)
 
     def read_data(self, n_items, buf):

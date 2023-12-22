@@ -13,11 +13,13 @@ class NumpyColumn(Column):
         data = buf.read(n_items * self.dtype.itemsize)
         return np.frombuffer(data, self.dtype.newbyteorder('<'), n_items)
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         buf.write(items.astype(self.dtype.newbyteorder('<')).tobytes())
 
-    def _write_nulls_map(self, items, buf):
-        s = self.make_null_struct(len(items))
+    def _write_nulls_map(self, items, n_items):
+        if n_items is None:
+            n_items = len(items)
+        s = self.make_null_struct(n_items)
         nulls_map = self._get_nulls_map(items)
         buf.write(s.pack(*nulls_map))
 
@@ -35,7 +37,7 @@ class NumpyColumn(Column):
 
         return items
 
-    def prepare_items(self, items):
+    def prepare_items(self, items, n_items=None):
         nulls_map = pd.isnull(items)
 
         # Always replace null values to null_value for proper inserts into

@@ -23,10 +23,12 @@ class NumpyLowCardinalityColumn(LowCardinalityColumn):
         super(NumpyLowCardinalityColumn, self).__init__(nested_column,
                                                         **kwargs)
 
-    def _write_data(self, items, buf):
+    def _write_data(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
         # Do not write anything for empty column.
         # May happen while writing empty arrays.
-        if not len(items):
+        if not n_items:
             return
 
         # Replace nans with defaults if not nullabe.

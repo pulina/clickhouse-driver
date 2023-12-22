@@ -17,7 +17,6 @@ class CommonSerialization(object):
 
 
 class SparseSerialization(CommonSerialization):
-
     def __init__(self, *args, **kwargs):
         self.sparse_indexes = []
         self.items_total = None
@@ -70,29 +69,31 @@ class Column(object):
 
     null_value = 0
 
-    def __init__(self, types_check=False, has_custom_serialization=False,
-                 **kwargs):
+    def __init__(self, types_check=False, has_custom_serialization=False, **kwargs):
         self.nullable = False
         self.types_check_enabled = types_check
         self.has_custom_serialization = has_custom_serialization
         self.serialization = CommonSerialization(self)
         self.input_null_as_default = False
 
-        self.context = kwargs['context']
-        self.input_null_as_default = self.context.client_settings \
-            .get('input_format_null_as_default', False)
+        self.context = kwargs["context"]
+        self.input_null_as_default = self.context.client_settings.get(
+            "input_format_null_as_default", False
+        )
 
         super(Column, self).__init__()
 
     def make_null_struct(self, n_items):
-        return Struct('<{}B'.format(n_items))
+        return Struct("<{}B".format(n_items))
 
     def _read_nulls_map(self, n_items, buf):
         s = self.make_null_struct(n_items)
         return s.unpack(buf.read(s.size))
 
-    def _write_nulls_map(self, items, buf):
-        s = self.make_null_struct(len(items))
+    def _write_nulls_map(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
+        s = self.make_null_struct(n_items)
         items = [x is None for x in items]
         buf.write(s.pack(*items))
 
@@ -100,7 +101,9 @@ class Column(object):
         if not isinstance(value, self.py_types):
             raise exceptions.ColumnTypeMismatchException(value)
 
-    def prepare_items(self, items):
+    def prepare_items(self, items, n_items=None):
+        if n_items is None:
+            n_items = len(items)
         nullable = self.nullable
         null_value = self.null_value
         null_as_default = self.input_null_as_default
@@ -111,11 +114,15 @@ class Column(object):
         else:
             check_item_type = False
 
-        if (not (self.nullable or null_as_default) and not check_item_type and
-                not check_item and not self.before_write_items):
+        if (
+            not (self.nullable or null_as_default)
+            and not check_item_type
+            and not check_item
+            and not self.before_write_items
+        ):
             return items
 
-        nulls_map = [False] * len(items) if self.nullable else None
+        nulls_map = [False] * n_items if self.nullable else None
         for i, x in enumerate(items):
             if x is None:
                 if nullable:
@@ -142,13 +149,15 @@ class Column(object):
         if self.nullable:
             self._write_nulls_map(items, buf)
 
-        self._write_data(items, buf)
+        self._write_data(items, buf, len(items))
 
-    def _write_data(self, items, buf):
-        prepared = self.prepare_items(items)
-        self.write_items(prepared, buf)
+    def _write_data(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
+        prepared = self.prepare_items(items, n_items)
+        self.write_items(prepared, buf, n_items)
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         raise NotImplementedError
 
     def read_data(self, n_items, buf):
@@ -169,8 +178,7 @@ class Column(object):
             return self.after_read_items(items, nulls_map)
         elif nulls_map is not None:
             return tuple(
-                (None if is_null else items[i])
-                for i, is_null in enumerate(nulls_map)
+                (None if is_null else items[i]) for i, is_null in enumerate(nulls_map)
             )
         return items
 
@@ -195,10 +203,12 @@ class FormatColumn(Column):
     format = None
 
     def make_struct(self, n_items):
-        return Struct('<{}{}'.format(n_items, self.format))
+        return Struct("<{}{}".format(n_items, self.format))
 
-    def write_items(self, items, buf):
-        s = self.make_struct(len(items))
+    def write_items(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
+        s = self.make_struct(n_items)
         try:
             buf.write(s.pack(*items))
 

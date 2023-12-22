@@ -28,9 +28,9 @@ class JsonColumn(Column):
         col.read_state_prefix(buf)
         return col.read_data(n_items, buf)
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         items = [x if isinstance(x, str) else json.dumps(x) for x in items]
-        self.string_column.write_items(items, buf)
+        self.string_column.write_items(items, buf, n_items)
 
 
 def create_json_column(spec, column_by_spec_getter, column_options):

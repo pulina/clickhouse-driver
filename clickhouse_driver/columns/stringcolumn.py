@@ -1,12 +1,11 @@
-
 from .. import defines
 from .base import Column
 
 
 class String(Column):
-    ch_type = 'String'
-    py_types = (str, )
-    null_value = ''
+    ch_type = "String"
+    py_types = (str,)
+    null_value = ""
 
     default_encoding = defines.STRINGS_ENCODING
 
@@ -14,7 +13,7 @@ class String(Column):
         self.encoding = encoding
         super(String, self).__init__(**kwargs)
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         buf.write_strings(items, encoding=self.encoding)
 
     def read_items(self, n_items, buf):
@@ -22,10 +21,10 @@ class String(Column):
 
 
 class ByteString(String):
-    py_types = (bytes, )
-    null_value = b''
+    py_types = (bytes,)
+    null_value = b""
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         buf.write_strings(items)
 
     def read_items(self, n_items, buf):
@@ -33,38 +32,40 @@ class ByteString(String):
 
 
 class FixedString(String):
-    ch_type = 'FixedString'
+    ch_type = "FixedString"
 
     def __init__(self, length, **kwargs):
         self.length = length
         super(FixedString, self).__init__(**kwargs)
 
     def read_items(self, n_items, buf):
-        return buf.read_fixed_strings(
-            n_items, self.length, encoding=self.encoding
-        )
+        return buf.read_fixed_strings(n_items, self.length, encoding=self.encoding)
 
-    def write_items(self, items, buf):
-        buf.write_fixed_strings(items, self.length, encoding=self.encoding)
+    def write_items(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
+        buf.write_fixed_strings(items, self.length, n_items, encoding=self.encoding)
 
 
 class ByteFixedString(FixedString):
     py_types = (bytearray, bytes)
-    null_value = b''
+    null_value = b""
 
     def read_items(self, n_items, buf):
         return buf.read_fixed_strings(n_items, self.length)
 
-    def write_items(self, items, buf):
-        buf.write_fixed_strings(items, self.length)
+    def write_items(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
+        buf.write_fixed_strings(items, n_items, self.length)
 
 
 def create_string_column(spec, column_options):
-    client_settings = column_options['context'].client_settings
-    strings_as_bytes = client_settings['strings_as_bytes']
-    encoding = client_settings.get('strings_encoding', String.default_encoding)
+    client_settings = column_options["context"].client_settings
+    strings_as_bytes = client_settings["strings_as_bytes"]
+    encoding = client_settings.get("strings_encoding", String.default_encoding)
 
-    if spec == 'String':
+    if spec == "String":
         cls = ByteString if strings_as_bytes else String
         return cls(encoding=encoding, **column_options)
     else:

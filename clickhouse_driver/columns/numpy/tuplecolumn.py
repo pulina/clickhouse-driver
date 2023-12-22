@@ -14,7 +14,7 @@ class TupleColumn(NumpyColumn):
         for i, (x, name) in enumerate(zip(self.nested_columns, names)):
             x.write_data(items[name], buf)
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         return self.write_data(items, buf)
 
     def read_data(self, n_items, buf):

@@ -50,7 +50,10 @@ class LowCardinalityColumn(Column):
         # KeysSerializationVersion. See ClickHouse docs.
         write_binary_int64(1, buf)
 
-    def _write_data(self, items, buf):
+    def _write_data(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
+
         index, keys = [], []
         key_by_index_element = {}
         nested_is_nullable = False
@@ -114,7 +117,7 @@ class LowCardinalityColumn(Column):
             self.nested_column.write_data(index_to_write, buf)
         else:
             self.nested_column.write_data(index, buf)
-        write_binary_int64(len(items), buf)
+        write_binary_int64(n_items, buf)
         int_column.write_items(keys, buf)
 
     def _read_data(self, n_items, buf, nulls_map=None):

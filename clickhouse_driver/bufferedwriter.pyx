@@ -58,9 +58,9 @@ cdef class BufferedWriter(object):
             self.write(make_varint(PyBytes_GET_SIZE(value)))
             self.write(value)
 
-    def write_fixed_strings_as_bytes(self, items, Py_ssize_t length):
+    def write_fixed_strings_as_bytes(self, items, Py_ssize_t length, unsigned long long n_items):
         cdef Py_ssize_t buf_pos = 0
-        cdef Py_ssize_t items_buf_size = length * len(items)
+        cdef Py_ssize_t items_buf_size = length * n_items
         if items_buf_size > self.buffer_size:
             items_buf_size = self.buffer_size # type fuck
         cdef char* c_value
@@ -86,13 +86,13 @@ cdef class BufferedWriter(object):
         finally:
             PyMem_Free(items_buf)
 
-    def write_fixed_strings(self, items, Py_ssize_t length, encoding=None):
+    def write_fixed_strings(self, items, Py_ssize_t length, unsigned long long n_items, encoding=None):
         if encoding is None:
             self.write_fixed_strings_as_bytes(items, length)
             return
 
         cdef Py_ssize_t buf_pos = 0
-        cdef Py_ssize_t items_buf_size = length * len(items)
+        cdef Py_ssize_t items_buf_size = length * n_items
         if items_buf_size > self.buffer_size:
             items_buf_size = self.buffer_size # type fuck
         cdef char* c_value

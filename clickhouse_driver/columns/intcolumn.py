@@ -106,8 +106,9 @@ class LargeIntColumn(IntColumn):
     to_quads = None
     from_quads = None
 
-    def write_items(self, items, buf):
-        n_items = len(items)
+    def write_items(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
 
         s = self.make_struct(self.factor * n_items)
         uint_64_pairs = self.to_quads(items, n_items)

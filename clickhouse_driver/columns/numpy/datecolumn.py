@@ -13,7 +13,7 @@ class NumpyDateColumn(NumpyColumn):
         data = super(NumpyDateColumn, self).read_items(n_items, buf)
         return data.astype('datetime64[D]')
 
-    def write_items(self, items, buf):
+    def write_items(self, items, buf, n_items=None):
         super(NumpyDateColumn, self).write_items(
             items.astype('datetime64[D]'), buf
         )

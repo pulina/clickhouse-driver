@@ -11,8 +11,9 @@ class UUIDColumn(FormatColumn):
     format = 'Q'
 
     # UUID is stored by two uint64 numbers.
-    def write_items(self, items, buf):
-        n_items = len(items)
+    def write_items(self, items, buf, n_items=None):
+        if n_items is None:
+            n_items = len(items)
 
         uint_64_pairs = [None] * 2 * n_items
         for i, x in enumerate(items):
